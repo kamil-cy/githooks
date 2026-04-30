@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 
-from simplegithooks import GitHook, PrePushConfig
+from githooks import GitHook, PrePushConfig
 
 pre_push = GitHook(__file__, PrePushConfig())
 pre_push.add_ignored_files(["pre_*_example.py", "*.svg", "README.md"])

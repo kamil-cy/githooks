@@ -18,7 +18,7 @@ from .colors import (
 )
 from .git_hooks import GitHook, PreCommitConfig, PrePushConfig
 
-__title__ = "simplegithooks"
+__title__ = "githooks"
 
 try:
     __version__ = version(__title__)

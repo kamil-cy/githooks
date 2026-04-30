@@ -1,5 +1,5 @@
 [project]
-name = "simplegithooks"
+name = "githooks"
 version = "1.2.3"
 description = "Write pretty and concise Git hooks in Python."
 readme = "README.md"
@@ -10,11 +10,11 @@ license-files = ["LICENSE"]
 dependencies = []
 
 [project.scripts]
-simplegithooks = "simplegithooks.cli:main"
+githooks = "githooks.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/kamil-cy/simplegithooks"
-Repository = "https://github.com/kamil-cy/simplegithooks"
+Homepage = "https://github.com/kamil-cy/githooks"
+Repository = "https://github.com/kamil-cy/githooks"
 
 [build-system]
 requires = ["setuptools", "wheel"]

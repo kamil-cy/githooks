@@ -3,9 +3,9 @@ import difflib
 import sys
 from pathlib import Path
 
-from simplegithooks import __version__
-from simplegithooks.colors import fg_cyan, fg_red, reset
-from simplegithooks.git_hooks import GitHook, HookConfig, PreCommitConfig, PrePushConfig
+from githooks import __version__
+from githooks.colors import fg_cyan, fg_red, reset
+from githooks.git_hooks import GitHook, HookConfig, PreCommitConfig, PrePushConfig
 
 
 def main() -> None:
@@ -39,7 +39,7 @@ def main() -> None:
 
     options = parser.parse_args()
     if options.version:
-        print(f"SimpleGitHooks {__version__}")
+        print(f"GitHooks {__version__}")
         sys.exit(0)
 
     hook_name: str = options.hook_name

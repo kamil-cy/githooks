@@ -1,6 +1,6 @@
-# SimpleGitHooks
+# GitHooks
 
-Write pretty and concise Git hooks in Python. SimpleGitHooks lets you write an entire Git hook directly in Python, without using YAML. It’s ideal when you want full control and all your logic contained in a single file.
+Write pretty and concise Git hooks in Python. GitHooks lets you write an entire Git hook directly in Python, without using YAML. It’s ideal when you want full control and all your logic contained in a single file.
 
 - [Installing](#installing)
 - [Hooks](#hooks)
@@ -20,8 +20,12 @@ Write pretty and concise Git hooks in Python. SimpleGitHooks lets you write an e
 You can install via `pip`:
 
 ```sh
-pip install simplegithooks
+pip install githooks
 ```
+
+### Old version
+
+`GitHooks` was previously named `SimpleGitHooks`, you can install latest old version by command `pip install simplegithooks`
 
 ## Hooks
 
@@ -31,10 +35,10 @@ Write simple pre-commit Git hook in your `.git/hooks/pre-commit`:
 
 ```python
 #!/usr/bin/env python
-from simplegithooks import PreCommit
+from githooks import PreCommit
 
 pre_commit = PreCommit(__file__)
-pre_commit.add_ignored_file("src/simplegithooks/pre-commit.py")
+pre_commit.add_ignored_file("src/githooks/pre-commit.py")
 pre_commit.check_content_for("FIXME", "❌", "error")
 pre_commit.check_content_for("NotImplemented", "🚧", "fail")
 pre_commit.check_content_for("TODO", "⚠️", "warning", prevent=False)
@@ -63,7 +67,7 @@ def sqrt():
 
 And when you try to commit this file using `git commit -m "message"` the output will be:
 
-![output_main_1a.png](https://raw.githubusercontent.com/kamil-cy/simplegithooks/main/docs/outputs/main_1a.png)
+![output_main_1a.png](https://raw.githubusercontent.com/kamil-cy/githooks/main/docs/outputs/main_1a.png)
 
 What happened here? Let's focus only on checks that prevents us from commit this change:
 
@@ -93,7 +97,7 @@ def sqrt(x):
 
 The output after commit will be:
 
-![output_main_1b.png](https://raw.githubusercontent.com/kamil-cy/simplegithooks/main/docs/outputs/main_1b.png)
+![output_main_1b.png](https://raw.githubusercontent.com/kamil-cy/githooks/main/docs/outputs/main_1b.png)
 
 Now `check_content_for("TODO", "⚠️", "warning", prevent=False)` failed because `TODO` was found in `main_1.py`, yet this is not preventing us from commit changes, so commit command was succeeded but with warning`Commit allowed conditionally.`
 
@@ -118,7 +122,7 @@ def sqrt(x):
 
 Finally we reached our goal:
 
-![output_main_1c.png](https://raw.githubusercontent.com/kamil-cy/simplegithooks/main/docs/outputs/main_1c.png)
+![output_main_1c.png](https://raw.githubusercontent.com/kamil-cy/githooks/main/docs/outputs/main_1c.png)
 
 ### PrePush
 
@@ -128,7 +132,7 @@ Write simple pre-push Git hook in your `.git/hooks/pre-push`:
 #!/usr/bin/env python
 import sys
 
-from simplegithooks import GitHook, PrePushConfig
+from githooks import GitHook, PrePushConfig
 
 pre_push = GitHook(__file__, PrePushConfig())
 pre_push.add_ignored_files(["pre_push_example.py", "*.svg", "README.md"])
@@ -175,13 +179,13 @@ pre_commit.check_command("false", rc_zero_succes=False) # ❯ false (OK, RC!=0 S
 
 ## Creating a symlink
 
-Run `simplegithooks pre-commit --install path/to/pre_commit.py` or `simplegithooks pre-push --install path/to/pre_push.py` to create a symlink for you repository:
+Run `githooks pre-commit --install path/to/pre_commit.py` or `githooks pre-push --install path/to/pre_push.py` to create a symlink for you repository:
 
-![output_create_symlink.png](https://raw.githubusercontent.com/kamil-cy/simplegithooks/main/docs/outputs/create_symlink.png)
+![output_create_symlink.png](https://raw.githubusercontent.com/kamil-cy/githooks/main/docs/outputs/create_symlink.png)
 
 If a hook file already exists, an additional message e.g. <span style="color:yellow">WARNING: file '/home/user/project/.git/hooks/pre-commit' already exists and will be overwritten.</span> will be shown as below
 
-![output_create_symlink.png](https://raw.githubusercontent.com/kamil-cy/simplegithooks/main/docs/outputs/create_symlink_force.png)
+![output_create_symlink.png](https://raw.githubusercontent.com/kamil-cy/githooks/main/docs/outputs/create_symlink_force.png)
 
 ### Troubleshooting
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 
-from simplegithooks import GitHook, PreCommitConfig
+from githooks import GitHook, PreCommitConfig
 
 pre_commit = GitHook(__file__, PreCommitConfig())
 pre_commit.add_ignored_files(["pre_*_example.py", "*.svg", "README.md"])
@@ -17,7 +17,7 @@ print(pre_commit.summary())
 sys.exit(pre_commit.rc)
 
 
-# pre_commit.add_ignored_file("src/simplegithooks/pre_commit_example.py")
+# pre_commit.add_ignored_file("src/githooks/pre_commit_example.py")
 
 # pre_commit.check_command("uv add --group dev ruff mypy bandit semgrep")
 # pre_commit.check_command("bandit -r . --severity-level all --confidence-level all -f txt -o bandit-report.txt")
