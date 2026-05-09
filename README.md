@@ -1,3 +1,5 @@
+![❤️ Made by human](https://raw.githubusercontent.com/kamil-cy/badges/main/svg/made_by_human_red_heart.svg)
+
 # GitHooks
 
 Write pretty and concise Git hooks in Python. GitHooks lets you write an entire Git hook directly in Python, without using YAML. It’s ideal when you want full control and all your logic contained in a single file.
