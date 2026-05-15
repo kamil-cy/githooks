@@ -142,59 +142,77 @@ class GitHook:
         subprocess.run(hook_path_absolute, check=False)  # noqa: S603
 
     @classmethod
-    def install_git_hook(cls, path_from: Path | str, hook_name: str) -> None:
+    def install_git_hook(
+        cls,
+        path_from: str,
+        hook_name: str,
+        auto_confirm: bool = False,
+    ) -> None:
         hook_path_absolute = GitHook.hook_path_absolute(hook_name)
+        overwrite = False
         if hook_path_absolute.exists() or hook_path_absolute.is_symlink():
-            cls.create_symbolic_link(
-                path_from,
-                str(hook_path_absolute),
-                force=True,
-            )
-        else:
-            cls.create_symbolic_link(path_from, str(hook_path_absolute))
+            overwrite = True
+        cls.create_symbolic_link(
+            path_from,
+            str(hook_path_absolute),
+            overwrite,
+            auto_confirm,
+        )
         cls.lockdown = True
+
+    @classmethod
+    def create_symbolic_link_action(
+        cls,
+        create_symbolic_link_cmd: str,
+        path_from: str,
+    ) -> None:
+        _path_from = Path(path_from)
+        try:
+            subprocess.check_output(  # noqa: S602
+                create_symbolic_link_cmd,
+                shell=True,
+            ).decode().strip()
+            _path_from.chmod(_path_from.stat().st_mode | 64)
+        except:  # noqa: E722
+            msg = f"{fg_red}Failure, couldn't create the symbolic link.{reset}\n"
+            sys.stderr.write(msg)
+        else:
+            msg = f"{fg_green}Success, the symbolic link was created.{reset}\n"
+            sys.stderr.write(msg)
 
     @classmethod
     def create_symbolic_link(
         cls,
-        path_from: Path | str,
+        path_from: str,
         path_to: str,
-        force: bool = False,  # noqa: FBT001, FBT002
-    ):
-        _path_from = Path(path_from)
-        _f = " -f" if force else ""
+        overwrite: bool = False,  # noqa: FBT001, FBT002
+        auto_confirm: bool = False,
+    ) -> None:
+        _f = " -f" if overwrite else ""
         create_symbolic_link_cmd = f"ln{_f} -s {path_from} {path_to}"
         warning = f"WARNING: file '{path_to}' already exists and will be overwritten.\n"
-        msg = (
-            "To use this Git hook you must either create a symbolic link for"
-            " this file or copy it's content to the Git hook file.\n"
-            f"{fg_yellow}{warning if force else ''}{reset}"
-            "Do you want to execute the following command to create the symbolic link?\n"
-            f"  {fg_magenta}{create_symbolic_link_cmd}{reset}\n"
-            f"Please type '{fg_cyan}CREATE_SYMBOLIC_LINK{reset}' to execute this command (mind underscores): "
-        )
-        sys.stderr.write(msg)
-        try:
-            ans = input()
-        except KeyboardInterrupt:
-            sys.stderr.write(f"{fg_yellow}Detected ^C, exiting...{reset}")
-            return
-        if ans.strip() == "CREATE_SYMBOLIC_LINK":
-            try:
-                subprocess.check_output(  # noqa: S602
-                    create_symbolic_link_cmd,
-                    shell=True,
-                ).decode().strip()
-                _path_from.chmod(_path_from.stat().st_mode | 64)
-            except:  # noqa: E722
-                msg = f"{fg_red}Failure, couldn't create the symbolic link.{reset}\n"
-                sys.stderr.write(msg)
-            else:
-                msg = f"{fg_green}Success, the symbolic link was created.{reset}\n"
-                sys.stderr.write(msg)
-        else:
-            msg = f"You've not provided '{fg_cyan}CREATE_SYMBOLIC_LINK{reset}', exiting...\n"
+        sys.stderr.write(f"{fg_yellow}{warning if overwrite else ''}{reset}")
+
+        if not auto_confirm:
+            msg = (
+                "To use this Git hook you must either create a symbolic link for"
+                " this file or copy it's content to the Git hook file.\n"
+                "Do you want to execute the following command to create the symbolic link?\n"
+                f"  {fg_magenta}{create_symbolic_link_cmd}{reset}\n"
+                f"Please type '{fg_cyan}CREATE_SYMBOLIC_LINK{reset}' to execute this command (mind underscores): "
+            )
             sys.stderr.write(msg)
+            try:
+                ans = input()
+            except KeyboardInterrupt:
+                sys.stderr.write(f"{fg_yellow}Detected ^C, exiting...{reset}")
+                return
+            if ans.strip() != "CREATE_SYMBOLIC_LINK":
+                msg = f"You've not provided '{fg_cyan}CREATE_SYMBOLIC_LINK{reset}', exiting...\n"
+                sys.stderr.write(msg)
+                return
+
+        cls.create_symbolic_link_action(create_symbolic_link_cmd, path_from)
 
     def __getattribute__(self, name: str):
         attr = object.__getattribute__(self, name)

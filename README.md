@@ -14,7 +14,9 @@ Write pretty and concise Git hooks in Python. GitHooks lets you write an entire 
   - [Filter results](#filter-results)
   - [Check commands which `RC=0` means failure](#check-commands-which-rc0-means-failure)
 - [Creating a symlink](#creating-a-symlink)
+  - [Auto confirmation](#auto-confirmation)
   - [Troubleshooting](#troubleshooting)
+- [Changelog](#changelog)
 - [License](#license)
 
 ## Installing
@@ -27,7 +29,7 @@ pip install githooks
 
 ### Old version
 
-`GitHooks` was previously named `SimpleGitHooks`, you can install latest old version by command `pip install simplegithooks`
+`GitHooks` was previously named `SimpleGitHooks`, you can install latest old version by command `pip install simplegithooks` but it's recommended to use the latest `githooks`.
 
 ## Hooks
 
@@ -101,7 +103,7 @@ The output after commit will be:
 
 ![output_main_1b.png](https://raw.githubusercontent.com/kamil-cy/githooks/main/docs/outputs/main_1b.png)
 
-Now `check_content_for("TODO", "⚠️", "warning", prevent=False)` failed because `TODO` was found in `main_1.py`, yet this is not preventing us from commit changes, so commit command was succeeded but with warning`Commit allowed conditionally.`
+Now `check_content_for("TODO", "⚠️", "warning", prevent=False)` failed because `TODO` was found in `main_1.py`, yet this is not preventing us from commit changes, so commit command was succeeded but with warning `Commit allowed conditionally.`
 
 Still we can do better 😉, so let's try harder:
 
@@ -185,16 +187,24 @@ Run `githooks pre-commit --install path/to/pre_commit.py` or `githooks pre-push 
 
 ![output_create_symlink.png](https://raw.githubusercontent.com/kamil-cy/githooks/main/docs/outputs/create_symlink.png)
 
-If a hook file already exists, an additional message e.g. <span style="color:yellow">WARNING: file '/home/user/project/.git/hooks/pre-commit' already exists and will be overwritten.</span> will be shown as below
+If a hook file already exists, an additional message e.g. <span style="color:yellow">WARNING: file '/home/user/project/.git/hooks/pre-commit' already exists and will be overwritten.</span> will be shown as below:
 
 ![output_create_symlink.png](https://raw.githubusercontent.com/kamil-cy/githooks/main/docs/outputs/create_symlink_force.png)
 
+### Auto confirmation
+
+Pass `-y` or `--yes` or `--assume-yes` to skip confirmation with typing `CREATE_SYMBOLIC_LINK`. You will still get final result and warning if file or symbolic link already exists.
+
 ### Troubleshooting
 
-If you pass a bad hook name you'll receive a hint if there is a typo e.g. <span style="color:white;background:grey;">Unknown or unsupported hook: <span style="color:red">preccomyt</span>, did you mean: <span style="color:cyan">pre-commit</span></span>
+If you pass a bad hook name you'll receive a hint if there is a typo e.g. <span style="color:white;background:grey;">Unknown or unsupported hook: <span style="color:red">preccomyt</span>, did you mean: <span style="color:cyan">pre-commit</span></span>.
 
 In case of any problem while creating a symlink you'll get <span style="color:red;background:grey;">Failure, couldn't create the symbolic link.</span> instead of success message.
 
+## Changelog<a id="changelog"></a>
+
+See [Changelog](CHANGELOG.md).
+
 ## License<a id="license"></a>
 
-This repository is licensed under the [MIT License](LICENSE)
+This repository is licensed under the [MIT License](LICENSE).

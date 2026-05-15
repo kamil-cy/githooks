@@ -1,6 +1,6 @@
 [project]
 name = "githooks"
-version = "1.2.3"
+version = "1.2.4"
 description = "Write pretty and concise Git hooks in Python."
 readme = "README.md"
 requires-python = ">=3.12"
