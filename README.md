@@ -9,10 +9,15 @@ Write pretty and concise Git hooks in Python. GitHooks lets you write an entire 
   - [PreCommit](#precommit)
   - [PrePush](#prepush)
 - [Common config](#common-config)
-  - [Ignoring files](#ignoring-files)
+  - [`add_ignored_files` for ignoring files](#add_ignored_files-for-ignoring-files)
     - [Support for Python's pathlib.Path pattern matching](#support-for-pythons-pathlibpath-pattern-matching)
-  - [Filter results](#filter-results)
-  - [Check commands which `RC=0` means failure](#check-commands-which-rc0-means-failure)
+  - [`check_content_for` search for lines in files that match substring](#check_content_for-search-for-lines-in-files-that-match-substring)
+  - [`check_command` for checking commands execution](#check_command-for-checking-commands-execution)
+    - [Check commands which `RC=0` means failure](#check-commands-which-rc0-means-failure)
+  - [`outputs` for table-formatted color-aware outputs when using `check_command`](#outputs-for-table-formatted-color-aware-outputs-when-using-check_command)
+  - [`results` for all or filtered results](#results-for-all-or-filtered-results)
+  - [ `summary` for quick summary](#summary-for-quick-summary)
+  - [`rc` for the return code of the git hook](#rc-for-the-return-code-of-the-git-hook)
 - [Creating a symlink](#creating-a-symlink)
   - [Auto confirmation](#auto-confirmation)
   - [Troubleshooting](#troubleshooting)
@@ -152,7 +157,7 @@ You'll get similar outputs like for pre-commit.
 
 ## Common config
 
-### Ignoring files
+### `add_ignored_files` for ignoring files
 
 ```python
 pre_commit.add_ignored_file("src/obsolete.py")
@@ -165,7 +170,56 @@ pre_commit.add_ignored_files(["src/stub1.py", "src/stub2.py"])
 pre_commit.add_ignored_files(["pre-commit.py", "*.svg", "README.md"])
 ```
 
-### Filter results
+### `check_content_for` search for lines in files that match substring
+
+```python
+pre_commit.check_content_for("FIXME", "❌", "error")
+pre_commit.check_content_for("NotImplemented", "🚧", "fail")
+pre_commit.check_content_for("TODO", "⚠️", "warning", prevent=False)
+```
+
+#### `check_command` for checking commands execution
+
+```python
+pre_commit.check_command("ruff check . --fix --diff", prevent=False)
+pre_commit.check_command("ruff check . --fix --show-fixes")
+pre_commit.check_command("ruff format .")
+pre_commit.check_command("echo false && false", irrelevant=True)
+```
+
+#### Check commands which `RC=0` means failure
+
+```python
+pre_commit.check_command("true", rc_zero_succes=False)  # ❯ true (ERROR, RC!=0 SUCCESS) 🔒
+pre_commit.check_command("false", rc_zero_succes=False) # ❯ false (OK, RC!=0 SUCCESS)
+```
+
+### `outputs` for table-formatted color-aware outputs when using `check_command`
+
+```python
+pre_commit.check_command("ruff check . --fix --diff", prevent=False)
+print(pre_commit.outputs())
+```
+
+Example of an output:
+
+```
+┌─────────────────────────────────┐
+│ ruff check . --fix --show-fixes │
+├─────────────────────────────────┤
+│ All checks passed!              │
+└─────────────────────────────────┘
+```
+
+### `results` for all or filtered results
+
+All results:
+
+```python
+print(pre_commit.results())
+```
+
+Filtered results:
 
 ```python
 print(pre_commit.results("error"))
@@ -174,11 +228,54 @@ print(pre_commit.results("error", preventing_only=True))
 print(pre_commit.results("warning", preventing_only=True))
 ```
 
-### Check commands which `RC=0` means failure
+Example of results:
+
+```
+Results:
+  ❌ FIXME not found
+  🚧 NotImplemented not found
+  ⚠️ TODO not found
+  ❯ ruff check . --fix --diff (OK)
+  ❯ ruff check . --fix --show-fixes (OK)
+  ❯ ruff format . (OK)
+  ❯ mypy --explicit-package-bases --ignore-missing-imports . (OK)
+  ❯ echo false && false (ERROR, irrelevant=True)
+  ❯ cd . && pytest (OK)
+```
+
+### `summary` for quick summary
 
 ```python
-pre_commit.check_command("true", rc_zero_succes=False)  # ❯ true (ERROR, RC!=0 SUCCESS) 🔒
-pre_commit.check_command("false", rc_zero_succes=False) # ❯ false (OK, RC!=0 SUCCESS)
+print(pre_commit.summary())
+```
+
+Example of a summary:
+
+```
+Summary:
+  (nothing prevents from proceeding)
+```
+
+### `rc` for the return code of the git hook
+
+This will finish git hook script withe the git hook result:
+
+```python
+sys.exit(pre_commit.rc)
+```
+
+Possible outputs are:
+
+```
+🟢 Commit clean.
+```
+
+```
+🟡 Commit allowed (caution).
+```
+
+```
+🔴 Commit aborted.
 ```
 
 ## Creating a symlink

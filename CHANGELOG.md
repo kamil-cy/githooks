@@ -3,7 +3,10 @@
 **v1.2.4:**
 
 - add `-y` (`--yes` or `--assume-yes`) parameter to git hook installation to auto confirm actions (assumes you confirms all prompts and run non-interactively)
+- add support for table-formatted color-aware `outputs` when using `check_command`
+- add parameter `irrelevant` for `check_command`
 - add CHANGELOG.md
+- add `.vscode/launch.json`
 
 **v1.2.3: ⚠️ BREAKING CHANGE**
 

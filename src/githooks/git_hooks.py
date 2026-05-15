@@ -1,9 +1,15 @@
-import contextlib
-import subprocess
+import os
 import sys
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass, field
+from fcntl import ioctl
 from pathlib import Path
+from pty import openpty
+from shutil import get_terminal_size
+from struct import pack
+from subprocess import Popen, check_output, run
+from termios import TIOCSWINSZ
 from typing import Any, Protocol
 
 from .colors import (
@@ -20,23 +26,6 @@ from .colors import (
     is_cli,
     reset,
 )
-
-
-@dataclass
-class Counter:
-    icon: str
-    icon_space: int
-    count: int
-    preventing: bool
-
-
-@dataclass
-class Result:
-    icon: str
-    icon_space: int
-    category: str
-    msg: str
-    preventing: bool
 
 
 @dataclass
@@ -105,6 +94,98 @@ class HookConfig(Protocol):
     outputs: dict[str, str]
 
 
+@dataclass
+class Counter:
+    icon: str
+    icon_space: int
+    count: int
+    preventing: bool
+
+
+@dataclass
+class Result:
+    icon: str
+    icon_space: int
+    category: str
+    msg: str
+    preventing: bool
+
+
+@dataclass
+class Command:
+    command: str
+    output_lines: list[str]
+    rc: int
+    success: bool | None = None
+    preventing: bool | None = None
+    irrelevant: bool | None = None
+
+
+def run_with_pty(command: str) -> tuple[int, str]:
+    cols, rows = get_terminal_size()
+    master_fd, slave_fd = openpty()
+    ioctl(slave_fd, TIOCSWINSZ, pack("HHHH", rows, cols - 4, 0, 0))
+    proc = Popen(
+        ["bash", "-c", command],
+        stdin=slave_fd,
+        stdout=slave_fd,
+        stderr=slave_fd,
+        close_fds=True,
+    )
+    os.close(slave_fd)
+    output = bytearray()
+    while True:
+        try:
+            data = os.read(master_fd, 1024)
+            if not data:
+                break
+            output.extend(data)
+        except OSError:
+            break
+    rc = proc.wait()
+    text = output.decode(errors="replace")
+    return rc, text
+
+
+def remove_ansi(text: str) -> str:
+    chars: list[str] = []
+    skip = False
+    for char in text:
+        if char == "\x1b":
+            skip = True
+            continue
+        if skip:
+            if char == "m":
+                skip = False
+            continue
+        chars.append(char)
+    return "".join(chars)
+
+
+def wrap(text: str, length: int = 70) -> list[str]:
+    # unfortunately textwrap.wrap is not working
+    chunks: list[str] = []
+    chars: list[str] = []
+    skip = False
+    i = 0
+    for char in text:
+        chars.append(char)
+        if char == "\x1b":
+            skip = True
+        if skip:
+            if char == "m":
+                skip = False
+        else:
+            i += 1
+        if i == length:
+            chunks.append("".join(chars))
+            chars = []
+            i = 0
+    if chars:
+        chunks.append("".join(chars))
+    return chunks
+
+
 class GitHook:
     def __init__(
         self,
@@ -121,6 +202,7 @@ class GitHook:
         self.files: dict[str, list[str]] = self.get_files_with_lines()
         self._counters: dict[str, Counter] = {}
         self._results: list[Result] = []
+        self._outputs: dict[str, Command] = {}
         self.caution: bool = False
         self.prevent: bool = False
         self._buffer: str = ""
@@ -129,7 +211,7 @@ class GitHook:
     @staticmethod
     def hook_path_absolute(hook_name: str) -> Path:
         git_cmd = ["git", "rev-parse", "--git-path", f"hooks/{hook_name}"]
-        hook_path_relative = subprocess.check_output(git_cmd).decode().strip()  # noqa: S603
+        hook_path_relative = check_output(git_cmd).decode().strip()  # noqa: S603
         return Path().cwd() / hook_path_relative
 
     @classmethod
@@ -139,7 +221,7 @@ class GitHook:
             msg = f"{fg_yellow}Hook '{fg_magenta}{hook_name}{fg_yellow}' not found in {fg_magenta}'.git/hooks'{fg_yellow} directory!{reset}"
             print(msg)
             sys.exit(1)
-        subprocess.run(hook_path_absolute, check=False)  # noqa: S603
+        run(hook_path_absolute, check=False)  # noqa: S603
 
     @classmethod
     def install_git_hook(
@@ -168,10 +250,7 @@ class GitHook:
     ) -> None:
         _path_from = Path(path_from)
         try:
-            subprocess.check_output(  # noqa: S602
-                create_symbolic_link_cmd,
-                shell=True,
-            ).decode().strip()
+            check_output(create_symbolic_link_cmd, shell=True).decode().strip()  # noqa: S602
             _path_from.chmod(_path_from.stat().st_mode | 64)
         except:  # noqa: E722
             msg = f"{fg_red}Failure, couldn't create the symbolic link.{reset}\n"
@@ -236,8 +315,8 @@ class GitHook:
         if text is None:
             text = self.buffer_read()
         if not is_cli():
-            with contextlib.suppress(Exception):
-                subprocess.run(["zenity", "--notification", f"--text={text}"])  # noqa: PLW1510, S603, S607
+            with suppress(Exception):
+                run(["zenity", "--notification", f"--text={text}"])  # noqa: PLW1510, S603, S607
 
     def init_event(self, hook_file_path: str) -> None:
         as_hook = self.hook_config.callbacks.get("as_git_hook", lambda: None)
@@ -255,13 +334,13 @@ class GitHook:
             files = self.files_from_git
         files_with_lines: dict[str, list[str]] = {}
         for filename in files:
-            with contextlib.suppress(Exception), Path(filename).open() as f:
+            with suppress(Exception), Path(filename).open() as f:
                 files_with_lines[filename] = f.readlines()
         return files_with_lines
 
     def get_files_from_command(self) -> list[str]:
         command = self.hook_config.command
-        return subprocess.check_output(command).decode().split()  # noqa: S603
+        return check_output(command).decode().split()  # noqa: S603
 
     def add_ignored_file(self, path: Path | str | None = None) -> None:
         if path is None:
@@ -320,44 +399,46 @@ class GitHook:
     def check_command(
         self,
         command: str,
+        irrelevant: bool = False,  # noqa: FBT001, FBT002
         prevent: bool = True,  # noqa: FBT001, FBT002
         rc_zero_succes: bool = True,  # noqa: FBT001, FBT002
         icon: str = "❯",  # noqa: RUF001
     ) -> int:
         _prevent = False
-        buffer: str = ""
-        buffer = f"{command}"
-        execution = subprocess.run(  # noqa: PLW1510, S602
-            command,
-            shell=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            cwd=Path(),
-        )
-        if execution.returncode == 127:  # noqa: PLR2004
-            buffer = f"{fg_white}{bg_red}{buffer} (command not found!){reset}"
-            if prevent:
+        buf: str = ""
+        buf = f"{command}"
+        rc, output = run_with_pty(command)
+        cmd_obj = Command(command, output.splitlines(), rc, irrelevant=irrelevant)
+        self._outputs[command] = cmd_obj
+        if rc == 127:  # noqa: PLR2004
+            buf = f"{fg_white}{bg_red}{buf} (command not found!){reset}"
+            cmd_obj.success = False
+            if prevent and not irrelevant:
                 self.prevent = True
                 _prevent = True
-                buffer = f"{buffer}{self.locker}"
-            rc = 127
+                cmd_obj.preventing = True
+                buf = f"{buf}{self.locker}"
         else:
             non_zero = ", RC!=0 SUCCESS" if not rc_zero_succes else ""
-            rc = execution.returncode
-            success = rc == 0 if rc_zero_succes else rc != 0
-            if success:
-                buffer = f"{fg_green}{buffer} (OK{non_zero}){reset}"
+            cmd_obj.success = rc == 0 if rc_zero_succes else rc != 0
+            if cmd_obj.success:
+                buf = f"{fg_green}{buf} (OK{non_zero}){reset}"
             else:
-                buffer = f"{fg_red}{buffer} (ERROR{non_zero}){reset}"
-                self.caution = True
-                if prevent:
+                self.caution = not irrelevant
+                color = fg_yellow if not irrelevant else fg_green
+                _irrelevant = ", irrelevant=True" if irrelevant else ""
+                locker = ""
+                if prevent and not irrelevant:
                     self.prevent = True
                     _prevent = True
-                    buffer = f"{buffer}{self.locker}"
-        result = Result(icon, 1, command, buffer, _prevent)
+                    cmd_obj.preventing = True
+                    locker = self.locker
+                    color = fg_red
+                buf = f"{color}{buf} (ERROR{non_zero}{_irrelevant}){locker}{reset}"
+        result = Result(icon, 1, command, buf, _prevent)
         self._counters[command] = Counter(icon, 1, 0, _prevent)
         self._results.append(result)
-        return rc
+        return cmd_obj.rc
 
     def results(
         self,
@@ -406,6 +487,50 @@ class GitHook:
         if empty:
             result = f"{result}{fg_green}{' ' * indent}(nothing prevents from proceeding){reset}\n"
         self.buffer_write(result)
+        return result
+
+    def outputs(self, border="│┌─┐├─┤└─┘│") -> str:
+        L = border[0]
+        NW = border[1]
+        N = border[2]
+        NE = border[3]
+        W = border[4]
+        C = border[5]
+        E = border[6]
+        SW = border[7]
+        S = border[8]
+        SE = border[9]
+        R = border[10]
+        result: str = ""
+        for command, cmd_obj in self._outputs.items():
+            cmd = command
+            if cmd_obj.irrelevant:
+                cmd = f"{cmd} (irrelevant=True)"
+            if cmd_obj.success:
+                color = fg_green
+            else:
+                color = (
+                    fg_red
+                    if cmd_obj.preventing
+                    else fg_green
+                    if cmd_obj.irrelevant
+                    else fg_yellow
+                )
+            cols = get_terminal_size().columns
+            longest_line_len: int = len(cmd)
+            lines: list[str] = []
+            for line in cmd_obj.output_lines:
+                longest_line_len = max(longest_line_len, len(line))
+                lines.extend(wrap(line, cols - 4))
+            max_line_len = min(longest_line_len, cols - 4)
+            result = f"{result}{NW}{N * (max_line_len + 2)}{NE}\n"
+            result = f"{result}{L}{color} {cmd:{max_line_len}} {reset}{R}\n"
+            result = f"{result}{W}{C * (max_line_len + 2)}{E}\n"
+            for line in lines:
+                fill = " " * (max_line_len - len(remove_ansi(line)))
+                result = f"{result}{L} {line}{fill} {R}\n"
+            result = f"{result}{SW}{S * (max_line_len + 2)}{SE}\n"
+            result = f"{result}{reset}"
         return result
 
     @property
