@@ -2,14 +2,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "pre_commit_example.py",
+            "name": "playground.py",
             "console": "integratedTerminal",
-            "consoleName": "pre_commit_example.py",
+            "consoleName": "playground.py",
             "justMyCode": false,
             "type": "debugpy",
             "request": "launch",
-            "cwd": "${workspaceFolder}/src/githooks",
-            "program": "pre_commit_example.py",
+            "cwd": "${workspaceFolder}",
+            "program": ".development/playground.py",
             "args": [],
             "env": {
                 "DEBUG": "1",
@@ -25,10 +25,38 @@
             "cwd": "${workspaceFolder}/src/githooks",
             "program": "cli.py",
             "args": [
-                "--version",
+                // "--version",
                 // "--help",
-                // "pre-commit",
+                "pre-commit",
             ],
+            "env": {
+                "DEBUG": "1",
+            }
+        },
+        {
+            "name": "examples/commit_msg.py",
+            "console": "integratedTerminal",
+            "consoleName": "examples/commit_msg.py",
+            "justMyCode": false,
+            "type": "debugpy",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "src/examples/commit-msg",
+            "args": [],
+            "env": {
+                "DEBUG": "1",
+            }
+        },
+        {
+            "name": "examples/pre_commit.py",
+            "console": "integratedTerminal",
+            "consoleName": "examples/pre_commit.py",
+            "justMyCode": false,
+            "type": "debugpy",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "src/examples/pre-commit",
+            "args": [],
             "env": {
                 "DEBUG": "1",
             }

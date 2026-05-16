@@ -2,16 +2,23 @@ import argparse
 import difflib
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from githooks import __version__
 from githooks.colors import fg_cyan, fg_red, reset
-from githooks.git_hooks import GitHook, HookConfig, PreCommitConfig, PrePushConfig
+from githooks.hooks.commit_msg import CommitMsg
+from githooks.hooks.pre_commit import PreCommit
+from githooks.hooks.pre_push import PrePush
+
+if TYPE_CHECKING:
+    from githooks.hooks import GitHook
 
 
 def main() -> None:
-    hooks = {
-        "pre-commit": PreCommitConfig,
-        "pre-push": PrePushConfig,
+    hooks: dict[str, type[GitHook]] = {
+        "pre-commit": PreCommit,
+        "pre-push": PrePush,
+        "commit-msg": CommitMsg,
     }
     description = "A simple command line interface for Git hooks"
 
@@ -52,7 +59,7 @@ def main() -> None:
 
     options = parser.parse_args()
     if options.version:
-        print(f"GitHooks {__version__}")
+        sys.stdout.write(f"GitHooks {__version__}\n")
         sys.exit(0)
 
     hook_name: str = options.hook_name
@@ -60,7 +67,7 @@ def main() -> None:
         parser.error("hook_name is required")
 
     try:
-        hook_class: HookConfig = hooks[hook_name]
+        hook_class: type[GitHook] = hooks[hook_name]
     except KeyError:
         similar = difflib.get_close_matches(hook_name, hooks.keys(), n=1)
         hint = f", did you mean: {fg_cyan}{similar[0]}{reset}" if similar else ""
@@ -68,19 +75,19 @@ def main() -> None:
         sys.stderr.write(msg)
         sys.exit(1)
 
-    hook = GitHook("", hook_class())
-
     if options.install:
         install_path = Path(options.install)
 
         if not install_path.exists():
             sys.stderr.write(f"File {fg_cyan}{install_path!s}{reset} not found!")
             sys.exit(1)
-        print(f"{options.yes = }")
-        hook.install_git_hook(install_path.absolute(), hook_name, options.yes)
+        hook_class.install_git_hook(install_path.absolute(), hook_name, options.yes)
         sys.exit(0)
 
+    hook: GitHook = hook_class()
     hook.run_default_git_hook(hook_name)
+    # TODO obsłużyć pozostałe akcjie hooków
+    # TODO sprawdzić czy działa CLI
 
 
 if __name__ == "__main__":
