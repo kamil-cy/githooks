@@ -1,0 +1,21 @@
+{
+    "python.testing.pytestArgs": [],
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "ruff.lint.ignore": [
+        "D100",
+        "D101",
+        "D102",
+        "D103",
+        "D104",
+        "D105",
+        "D106",
+        "D107",
+        "ERA001",
+        "FBT001",
+        "FBT002",
+        "FBT003",
+        "INP001",
+        "S101",
+    ],
+}

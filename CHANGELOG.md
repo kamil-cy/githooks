@@ -1,5 +1,16 @@
 # CHANGELOG
 
+**v1.3.0: ⚠️ BREAKING CHANGE**
+
+- rewrite whole codebase
+- add `CommitMsg` with support for conventional commits, forbidden word filtering (with built-in set), inserting into commit message content and validating title length
+- table-formatted color-aware `outputs` when using `check_command` have return code and can it's borders can be customized
+- add support for forced finish with provided RC
+- unify check rules and introduce params builder for checks
+- introduce `report` method as a shortcut for `command_outputs`, `results`, `summary` and `ending`
+- support for own check rules and customization of existing ones by overriding check params
+- ... and many more
+
 **v1.2.4:**
 
 - add `-y` (`--yes` or `--assume-yes`) parameter to git hook installation to auto confirm actions (assumes you confirms all prompts and run non-interactively)
